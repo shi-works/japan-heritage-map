@@ -25,12 +25,12 @@
         const map = new maplibregl.Map({
             container: 'map',
             style: 'std.json',
-            zoom: 12,
+            zoom: 5,
             minZoom: 1,
             maxZoom: 23,
             pitch: 0,
             bearing: 0,
-            center: [130.53534, 33.34053],
+            center: [137.11, 36.57],
             hash: true,
             attributionControl: false
         });
@@ -60,7 +60,7 @@
         // Attributionを折りたたみ表示
         map.addControl(new maplibregl.AttributionControl({
             compact: true,
-            customAttribution: '（<a href="https://twitter.com/syanseto" target="_blank">Twitter</a> | <a href="https://github.com/shi-works/gsi-landformclassification-with-floodarea-on-maplibre-gl-js" target="_blank">Github</a>） '
+            customAttribution: '（<a href="https://twitter.com/syanseto" target="_blank">Twitter</a> | <a href="https://github.com/shi-works/japan-heritage-map" target="_blank">Github</a>） '
         }));
 
         // 3D地形コントロール
