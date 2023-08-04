@@ -1,0 +1,175 @@
+<html>
+
+<head>
+    <title>日本遺産（構成文化財）マップ</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src='https://unpkg.com/maplibre-gl@3.1.0/dist/maplibre-gl.js'></script>
+    <link href='https://unpkg.com/maplibre-gl@3.1.0/dist/maplibre-gl.css' rel='stylesheet' />
+    <script type="module" src="maplibre-gl-gsi-terrain-fast-png.js"></script>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <script type="text/javascript">
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: 'std.json',
+            zoom: 12,
+            minZoom: 1,
+            maxZoom: 23,
+            pitch: 0,
+            bearing: 0,
+            center: [130.53534, 33.34053],
+            hash: true,
+            attributionControl: false
+        });
+
+        // ズーム・回転
+        map.addControl(new maplibregl.NavigationControl());
+
+        // フルスクリーンモードのオンオフ
+        map.addControl(new maplibregl.FullscreenControl());
+
+        // 現在位置表示
+        map.addControl(new maplibregl.GeolocateControl({
+            positionOptions: {
+                enableHighAccuracy: false
+            },
+            fitBoundsOptions: { maxZoom: 18 },
+            trackUserLocation: true,
+            showUserLocation: true
+        }));
+
+        // スケール表示
+        map.addControl(new maplibregl.ScaleControl({
+            maxWidth: 200,
+            unit: 'metric'
+        }));
+
+        // Attributionを折りたたみ表示
+        map.addControl(new maplibregl.AttributionControl({
+            compact: true,
+            customAttribution: '（<a href="https://twitter.com/syanseto" target="_blank">Twitter</a> | <a href="https://github.com/shi-works/gsi-landformclassification-with-floodarea-on-maplibre-gl-js" target="_blank">Github</a>） '
+        }));
+
+        // 3D地形コントロール
+        map.addControl(
+            new maplibregl.TerrainControl({
+                source: 'gsidem',
+                exaggeration: 1 // 標高を強調する倍率
+            })
+        );
+
+        map.on('load', () => {
+            // 標高タイル
+            map.addSource("gsidem", {
+                type: 'raster-dem',
+                tiles: [
+                    'gsidem://https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png',
+                ],
+                attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html#dem" target="_blank">地理院タイル(標高タイル)</a>',
+                tileSize: 256
+            });
+
+            // map.setTerrain({ 'source': 'gsidem', 'exaggeration': 1 });
+
+            // 陰影起伏図
+            map.addSource("hillshade", {
+                type: 'raster',
+                tiles: [
+                    'https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png',
+                ],
+                attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html#hillshademap" target="_blank">地理院タイル(陰影起伏図)</a>',
+                tileSize: 256
+            });
+
+            map.addLayer({
+                id: 'hillshade-tiles',
+                type: 'raster',
+                source: 'hillshade',
+                minzoom: 2,
+                maxzoom: 18,
+                paint: {
+                    'raster-opacity': 0.5
+                }
+            });
+
+            // 日本遺産（構成文化財）
+            map.addSource('japan-heritage', {
+                'type': 'geojson',
+                'data': './japan-heritage_props_detail.geojson',
+                attribution: '<a href="https://japan-heritage.bunka.go.jp/ja/">日本遺産ポータルサイト（文化庁）</a>'
+            });
+
+            map.loadImage('./img/location-pin2_red.png', // location-pinアイコンのURLを指定
+                function (error, image) {
+                    if (error) throw error;
+                    map.addImage('location-pin-2', image); // 'location-pin'という名前でアイコンを追加
+                }
+            );
+
+            // 日本遺産（構成文化財）シンボルレイヤ
+            map.addLayer({
+                'id': 'japan-heritage-symbol-1',
+                "type": "symbol",
+                'source': 'japan-heritage',
+                "layout": {
+                    "icon-image": "location-pin-2",
+                    "icon-size": 0.5
+                }
+            });
+
+            // map.showTileBoundaries = true;
+
+        })
+
+        // 画像が存在するかどうかを確認する関数
+        async function checkImage(url) {
+            try {
+                const response = await fetch(url, { method: 'HEAD' });
+                return response.ok;
+            } catch {
+                return false;
+            }
+        }
+
+        // 日本遺産（構成文化財）ポップアップ表示
+        map.on('click', 'japan-heritage-symbol-1', async (e) => {
+            var lng = e.features[0].geometry.coordinates[0];
+            var lat = e.features[0].geometry.coordinates[1];
+            var pidx = e.features[0].properties['pidx'];
+            var url = e.features[0].properties['url'];
+            var status = e.features[0].properties['status'];
+            var name = e.features[0].properties['name'];
+            var yomi = e.features[0].properties['yomi'];
+            var spot = e.features[0].properties['spot'];
+            let imgURL = e.features[0].properties['image'];
+
+            new maplibregl.Popup()
+                .setLngLat(e.lngLat)
+                .setHTML(
+                    '<div style="border-bottom:1px solid #000;"><strong>文化財の名称: <a href="' + url + '">' + name + '</a></strong></div>' +
+                    '<div style="border-bottom:1px solid #000;">読み: ' + yomi + '</div>' +
+                    '<div style="border-bottom:1px solid #000;">指定等の状況: ' + status + '</div>' +
+                    '<div style="border-bottom:1px solid #000;">文化財の所在地: ' + spot + '</div>' +
+                    '<div><a href="' + imgURL + '" target="_blank"><img src="' + imgURL + '" alt="画像" style="width: 100%; height: auto;"></a></div>' +
+                    '<div><a href="https://www.google.com/maps?q=' + lat + ',' + lng + '&hl=ja" target="_blank">🌎Google Maps</a></div>' +
+                    '<div><a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=' + lat + ',' + lng + '&hl=ja" target="_blank">📷Street View</a></div>'
+                )
+                .addTo(map);
+        });
+    </script>
+</body>
+
+</html>
