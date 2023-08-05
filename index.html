@@ -183,17 +183,24 @@
                 'source': 'japan-heritage',
                 "layout": {
                     "icon-image": "location-pin-2",
-                    "icon-size": 0.5,
+                    "icon-size": [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        1, 0.1,  // ズームレベル1でサイズは0.1
+                        12, 0.5  // ズームレベル12でサイズは0.5
+                    ],
                     "icon-allow-overlap": true // シンボルの重なりを許可
                 }
             });
+
 
             // 日本遺産（構成文化財）ラベルレイヤ
             map.addLayer({
                 id: 'japan-heritage-label',
                 type: 'symbol',
                 source: 'japan-heritage',
-                minzoom: 14,
+                minzoom: 13,
                 maxzoom: 23,
                 layout: {
                     'text-field': ['get', 'name'],
