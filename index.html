@@ -16,15 +16,58 @@
             height: 100%;
             width: 100%;
         }
+
+        .map-overlay {
+            font: bold 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+            position: absolute;
+            width: 220px;
+            bottom: 20px;
+            left: 0;
+            padding: 10px;
+        }
+
+        .map-overlay .map-overlay-inner {
+            background-color: #fff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .map-overlay label {
+            display: block;
+            margin: 0 0 0px;
+            font-size: 12px;
+            top: 100px;
+            left: 10px;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .map-overlay input {
+            background-color: transparent;
+            display: inline-block;
+            width: 100%;
+            position: relative;
+            margin: 0;
+            cursor: ew-resize;
+        }
     </style>
 </head>
 
 <body>
     <div id="map"></div>
+    <div class="map-overlay top">
+        <div class="map-overlay-inner">
+            <label>陰影起伏図 不透明度: <span id="inei-slider-opacity-value">30%</span></label>
+            <input id="inei-slider-opacity" type="range" min="0" max="100" step="1" value="30">
+        </div>
+    </div>
     <script type="text/javascript">
         const map = new maplibregl.Map({
             container: 'map',
-            style: 'std.json',
+            // style: 'std.json',
+            style: 'https://tile2.openstreetmap.jp/styles/osm-bright/style.json',
             zoom: 5,
             minZoom: 1,
             maxZoom: 23,
@@ -101,8 +144,21 @@
                 minzoom: 2,
                 maxzoom: 18,
                 paint: {
-                    'raster-opacity': 0.5
+                    'raster-opacity': 0.3
                 }
+            });
+
+            // スライダーで陰影起伏図の不透明度を制御
+            const inei_sliderOpactiy = document.getElementById('inei-slider-opacity');
+            const inei_sliderOpactiyValue = document.getElementById('inei-slider-opacity-value');
+
+            inei_sliderOpactiy.addEventListener('input', (e) => {
+                map.setPaintProperty(
+                    'hillshade-tiles',
+                    'raster-opacity',
+                    parseInt(e.target.value, 10) / 100
+                );
+                inei_sliderOpactiyValue.textContent = e.target.value + '%';
             });
 
             // 日本遺産（構成文化財）
@@ -122,14 +178,40 @@
 
             // 日本遺産（構成文化財）シンボルレイヤ
             map.addLayer({
-                'id': 'japan-heritage-symbol-1',
+                'id': 'japan-heritage-symbol',
                 "type": "symbol",
                 'source': 'japan-heritage',
                 "layout": {
                     "icon-image": "location-pin-2",
-                    "icon-size": 0.5
+                    "icon-size": 0.5,
+                    "icon-allow-overlap": true // シンボルの重なりを許可
                 }
             });
+
+            // 日本遺産（構成文化財）ラベルレイヤ
+            map.addLayer({
+                id: 'japan-heritage-label',
+                type: 'symbol',
+                source: 'japan-heritage',
+                minzoom: 14,
+                maxzoom: 23,
+                layout: {
+                    'text-field': ['get', 'name'],
+                    'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+                    'text-size': 12,
+                    'text-offset': [0, -2],
+                    'text-allow-overlap': false,
+                    'text-ignore-placement': false,
+                    'text-max-width': 20  // テキストが折り返される前の最大幅を設定
+                },
+                paint: {
+                    'text-color': 'rgba(255, 0, 0, 1)',
+                    'text-halo-blur': 1,
+                    'text-halo-color': 'rgba(255, 255, 255, 1)',
+                    'text-halo-width': 2
+                }
+            });
+
 
             // map.showTileBoundaries = true;
 
@@ -146,7 +228,7 @@
         }
 
         // 日本遺産（構成文化財）ポップアップ表示
-        map.on('click', 'japan-heritage-symbol-1', async (e) => {
+        map.on('click', 'japan-heritage-symbol', async (e) => {
             var lng = e.features[0].geometry.coordinates[0];
             var lat = e.features[0].geometry.coordinates[1];
             var pidx = e.features[0].properties['pidx'];
